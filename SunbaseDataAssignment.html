@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Integration</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <div>
+        <label for="login_id">Username:</label>
+        <input type="text" id="login_id">
+    </div>
+    <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password">
+    </div>
+    <button onclick="authenticateUser()">Login</button>
+
+    <h1>Customer List </h1>
+    <table id="customerListTable" border="">
+        <thead >
+            <tr >
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="customerList">
+            <tr>
+                <td>Sakshi</td>
+                <td>Sharma</td>
+                <td>Hno 1</td>
+                <td>Delhi</td>
+                <td>Delhi</td>
+                <td>sam@gmail.com</td>
+                <td>10258</td>
+                <td><button type="Edit">Delete</button><button type="Edit">Edit</button>
+            </tr>
+            <tr>
+                <td>Nikhil</td>
+                <td>Sharma</td>
+                <td>Hno 1</td>
+                <td>Delhi</td>
+                <td>Delhi</td>
+                <td>sam@gmail.com</td>
+                <td>10267</td>
+                <td><button type="Edit">Delete</button><button type="Edit">Edit</button>
+            </tr>
+            <tr>
+                <td>Raneet</td>
+                <td>Sharma</td>
+                <td>Hno 1</td>
+                <td>Delhi</td>
+                <td>Delhi</td>
+                <td>sam@gmail.com</td>
+                <td>10267</td>
+                <td><button type="Edit">Delete</button><button type="Edit">Edit</button>
+            </tr>
+            <tr>
+                <td>Jane</td>
+                <td>Sharma</td>
+                <td>Hno 1</td>
+                <td>Delhi</td>
+                <td>Delhi</td>
+                <td>sam@gmail.com</td>
+                <td>10244</td>
+                <td><button type="Edit">Delete</button><button type="Edit">Edit</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Add a New Customer</h2>
+    <div>
+        <label for="newFirstName">First Name:</label>
+        <input type="text" id="newFirstName">
+    </div>
+    <div>
+        <label for="newLastName">Last Name:</label>
+        <input type="text" id="newLastName">
+    </div>
+    <div>
+        <label for="Address"> Address:</label>
+        <input type="adress" id="Address">
+    </div>
+    <div>
+        <label for="newLastName">Last Name:</label>
+        <input type="text" id="newLastName">
+    </div>
+    <div>
+        <label for="newLastName">Last Name:</label>
+        <input type="text" id="newLastName">
+    </div>
+    
+    <button onclick="createCustomer()">Add Customer</button>
+
+    <script>
+        let authToken = null;
+
+        function authenticateUser() {
+            const login_id = document.getElementById('login_id').value;
+            const password = document.getElementById('password').value;
+
+            const authData = {
+                login_id,
+                password
+            };
+
+            fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment_auth.jsp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(authData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                authToken = data.token;
+                // After successful authentication, load the customer list
+                getCustomerList();
+            })
+            .catch(error => console.error('Authentication failed:', error));
+        }
+
+        function getCustomerList() {
+            fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const customerList = document.getElementById('customerList');
+                customerList.innerHTML = '';
+
+                data.forEach(customer => {
+                    const row = customerList.insertRow();
+                    row.innerHTML = `
+                        <td>${customer.first_name}</td>
+                        <td>${customer.last_name}</td>
+                        <td>${customer.email}</td>
+                        <td>
+                            <button onclick="deleteCustomer('${customer.uuid}')">Delete</button>
+                            <button onclick="updateCustomer('${customer.uuid}')">Update</button>
+                        </td>
+                    `;
+                });
+            })
+            .catch(error => console.error('Failed to retrieve customer list:', error));
+        }
+
+        function createCustomer() {
+            const newFirstName = document.getElementById('newFirstName').value;
+            const newLastName = document.getElementById('newLastName').value;
+
+            if (!newFirstName || !newLastName) {
+                alert('First Name and Last Name are mandatory.');
+                return;
+            }
+
+            const customerData = {
+                first_name: newFirstName,
+                last_name: newLastName,
+                // Add other customer details here
+            };
+
+            fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=create', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(customerData)
+            })
+            .then(response => {
+                if (response.status === 201) {
+                    alert('Customer created successfully');
+                    getCustomerList();
+                } else if (response.status === 400) {
+                    alert('First Name or Last Name is missing');
+                } else {
+                    alert('Failed to create customer');
+                }
+            })
+            .catch(error => console.error('Failed to create customer:', error));
+        }
+
+        function deleteCustomer(uuid) {
+            fetch(`https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=delete&uuid=${uuid}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => {
+                if (response.status === 200) {
+                    alert('Customer deleted successfully');
+                    getCustomerList();
+                } else if (response.status === 400) {
+                    alert('UUID not found');
+                } else {
+                    alert('Error: Customer not deleted');
+                }
+            })
+            .catch(error => console.error('Failed to delete customer:', error));
+        }
+
+        function updateCustomer(uuid) {
+            const newFirstName = document.getElementById('newFirstName').value;
+            const newLastName = document.getElementById('newLastName').value;
+
+            if (!newFirstName || !newLastName) {
+                alert('First Name and Last Name are mandatory.');
+                return;
+            }
+
+            const customerData = {
+                first_name: newFirstName,
+                last_name: newLastName,
+                // Add other customer details here
+            };
+
+            fetch(`https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=update&uuid=${uuid}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(customerData)
+            })
+            .then(response => {
+                if (response.status === 200) {
+                    alert('Customer updated successfully');
+                    getCustomerList();
+                } else if (response.status === 400) {
+                    alert('Body is empty');
+                } else if (response.status === 500) {
+                    alert('UUID not found');
+                } else {
+                    alert('Failed to update customer');
+                }
+            })
+            .catch(error => console.error('Failed to update customer:', error));
+        }
+    </script>
+</body>
+</html>
